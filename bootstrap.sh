@@ -155,9 +155,23 @@ log "Applying macOS defaults"
 defaults write NSGlobalDomain KeyRepeat -int 1
 defaults write NSGlobalDomain InitialKeyRepeat -int 10
 defaults write -g ApplePressAndHoldEnabled -bool false
+# Text input: disable smart-quote, smart-dash, autocorrect, auto-capitalize
+# substitution (curly quotes in particular break code).
+defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
+defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
+defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
+defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false
 # Finder: show hidden files and all filename extensions.
 defaults write com.apple.finder AppleShowAllFiles -bool true
 defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+# Finder: path bar, status bar, list view, search current folder, folders on
+# top, and no warning when changing a file extension.
+defaults write com.apple.finder ShowPathbar -bool true
+defaults write com.apple.finder ShowStatusBar -bool true
+defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
+defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
+defaults write com.apple.finder _FXSortFoldersFirst -bool true
+defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
 # Do not write .DS_Store files to network or USB volumes.
 defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
 defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
@@ -165,8 +179,12 @@ defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
 mkdir -p "$HOME/Screenshots"
 defaults write com.apple.screencapture location -string "$HOME/Screenshots"
 defaults write com.apple.screencapture type -string "png"
-# Dock: autohide.
+# Dock: autohide, smaller tiles, scale minimize, no recent apps, fast animation.
 defaults write com.apple.dock autohide -bool true
+defaults write com.apple.dock tilesize -int 48
+defaults write com.apple.dock mineffect -string "scale"
+defaults write com.apple.dock show-recents -bool false
+defaults write com.apple.dock autohide-time-modifier -float 0.15
 killall Dock Finder SystemUIServer 2>/dev/null || true
 
 # --- 9. Default app associations -----------------------------------------
