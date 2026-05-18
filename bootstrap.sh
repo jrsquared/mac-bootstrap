@@ -186,6 +186,14 @@ defaults write com.apple.dock tilesize -int 16
 defaults write com.apple.dock size-immutable -bool true
 defaults write com.apple.dock mineffect -string "scale"
 defaults write com.apple.dock show-recents -bool false
+# Mission Control: do not reorder Spaces by most-recent use.
+defaults write com.apple.dock mru-spaces -bool false
+# Windows: faster resize animation, and expand Save/Print dialogs by default.
+defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
+defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
+defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
 defaults write com.apple.dock autohide-time-modifier -float 0.15
 killall Dock Finder SystemUIServer 2>/dev/null || true
 
