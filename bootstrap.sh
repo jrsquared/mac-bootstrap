@@ -221,7 +221,39 @@ defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
 defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
 killall Dock Finder SystemUIServer ControlCenter 2>/dev/null || true
 
-# --- 11. Default app associations ----------------------------------------
+# --- 11. Dock contents ---------------------------------------------------
+# Declarative: wipe the Dock and re-add this exact list in order.
+if command -v dockutil >/dev/null 2>&1; then
+  log "Setting Dock contents"
+  DOCK_APPS=(
+    "/System/Applications/Apps.app"
+    "/Applications/Safari.app"
+    "/Applications/Google Chrome.app"
+    "/System/Applications/Messages.app"
+    "/System/Applications/Mail.app"
+    "/System/Applications/Photos.app"
+    "/System/Applications/FaceTime.app"
+    "/System/Applications/Calendar.app"
+    "/System/Applications/TV.app"
+    "/System/Applications/Music.app"
+    "/Applications/Visual Studio Code.app"
+    "/Applications/iTerm.app"
+    "/System/Applications/System Settings.app"
+  )
+  dockutil --remove all --no-restart >/dev/null
+  for app in "${DOCK_APPS[@]}"; do
+    if [ -d "$app" ]; then
+      dockutil --add "$app" --no-restart >/dev/null
+    else
+      warn "Dock: $app not found, skipping"
+    fi
+  done
+  killall Dock 2>/dev/null || true
+else
+  warn "dockutil missing, skipping Dock contents"
+fi
+
+# --- 12. Default app associations ----------------------------------------
 # Registering iTerm via Launch Services for shell-script file types is the
 # equivalent of iTerm's "Make iTerm2 Default Term" menu item.
 if command -v duti >/dev/null 2>&1; then
@@ -242,7 +274,7 @@ else
   warn "duti missing, skipping default app associations"
 fi
 
-# --- 12. Touch ID for sudo -----------------------------------------------
+# --- 13. Touch ID for sudo -----------------------------------------------
 # sudo_local survives OS updates, unlike editing /etc/pam.d/sudo directly.
 if sudo grep -q pam_tid.so /etc/pam.d/sudo_local 2>/dev/null; then
   log "Touch ID for sudo already enabled"
