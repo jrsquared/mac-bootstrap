@@ -169,6 +169,7 @@ fi
 # --- 9. Standard folders --------------------------------------------------
 log "Creating standard folders"
 mkdir -p "$HOME/Developer"
+mkdir -p "$HOME/Screenshots"
 
 # --- 10. macOS system defaults -------------------------------------------
 log "Applying macOS defaults"
@@ -197,8 +198,7 @@ defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
 # Do not write .DS_Store files to network or USB volumes.
 defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
 defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
-# Screenshots: save to ~/Screenshots as PNG, no window drop-shadow.
-mkdir -p "$HOME/Screenshots"
+# Screenshots: save to ~/Screenshots (created above) as PNG, no drop-shadow.
 defaults write com.apple.screencapture location -string "$HOME/Screenshots"
 defaults write com.apple.screencapture type -string "png"
 defaults write com.apple.screencapture disable-shadow -bool true
