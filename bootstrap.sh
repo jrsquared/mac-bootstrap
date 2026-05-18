@@ -27,7 +27,25 @@ while true; do sudo -n true; sleep 50; kill -0 "$$" 2>/dev/null || exit; done &
 # Keep the Mac awake for the duration of this run.
 caffeinate -dimsu -w $$ &
 
-# --- 1. Homebrew ----------------------------------------------------------
+# --- 1. Computer name -----------------------------------------------------
+# Per-machine, so set it with COMPUTER_NAME=... in the environment. Runs before
+# chezmoi so hostname-based template checks render with the right name.
+if [ -n "${COMPUTER_NAME:-}" ]; then
+  HOST_SAFE="$(printf '%s' "$COMPUTER_NAME" | tr ' ' '-')"
+  if [ "$(scutil --get LocalHostName 2>/dev/null)" = "$HOST_SAFE" ]; then
+    log "Computer name already set to $COMPUTER_NAME"
+  else
+    log "Setting computer name to $COMPUTER_NAME"
+    sudo scutil --set ComputerName "$COMPUTER_NAME"
+    sudo scutil --set HostName "$HOST_SAFE"
+    sudo scutil --set LocalHostName "$HOST_SAFE"
+    dscacheutil -flushcache
+  fi
+else
+  log "COMPUTER_NAME not set, leaving computer name unchanged"
+fi
+
+# --- 2. Homebrew ----------------------------------------------------------
 if command -v brew >/dev/null 2>&1; then
   log "Homebrew already installed"
 else
@@ -43,7 +61,7 @@ else
 fi
 eval "$("$BREW_PREFIX/bin/brew" shellenv)"
 
-# --- 2. chezmoi -----------------------------------------------------------
+# --- 3. chezmoi -----------------------------------------------------------
 # chezmoi must be installed directly: it clones the dotfiles repo that contains
 # the Brewfile. Everything else (fish included) comes from the Brewfile via
 # `brew bundle` below.
@@ -54,7 +72,7 @@ else
   brew install chezmoi
 fi
 
-# --- 3. Ensure GitHub SSH access -----------------------------------------
+# --- 4. Ensure GitHub SSH access -----------------------------------------
 # The dotfiles repo is private, so cloning it needs a working SSH key.
 # `ssh -T git@github.com` always exits 1 (GitHub grants no shell), so capture
 # the output and inspect it rather than relying on the exit status. stdin is
@@ -77,7 +95,7 @@ else
   exit 1
 fi
 
-# --- 4. chezmoi init / apply ---------------------------------------------
+# --- 5. chezmoi init / apply ---------------------------------------------
 CHEZMOI_SRC="$(chezmoi source-path 2>/dev/null || echo "$HOME/.local/share/chezmoi")"
 if [ -d "$CHEZMOI_SRC/.git" ]; then
   log "chezmoi already initialized, updating"
@@ -92,7 +110,7 @@ else
   fi
 fi
 
-# --- 5. Install apps from Brewfile ---------------------------------------
+# --- 6. Install apps from Brewfile ---------------------------------------
 if [ -f "$BREWFILE" ]; then
   log "Installing apps from Brewfile"
   brew bundle --file="$BREWFILE"
@@ -111,7 +129,7 @@ else
   warn "No Brewfile at $BREWFILE, skipping brew bundle"
 fi
 
-# --- 6. Make fish the default shell --------------------------------------
+# --- 7. Make fish the default shell --------------------------------------
 FISH_PATH="$BREW_PREFIX/bin/fish"
 if [ ! -x "$FISH_PATH" ]; then
   warn "fish not installed (add it to the Brewfile), skipping default-shell change"
@@ -132,7 +150,7 @@ else
   fi
 fi
 
-# --- 7. fish plugins (fisher) --------------------------------------------
+# --- 8. fish plugins (fisher) --------------------------------------------
 # fish_plugins is chezmoi-managed; `fisher update` installs every plugin listed
 # there and updates ones already present.
 if [ -x "$FISH_PATH" ] && [ -f "$HOME/.config/fish/fish_plugins" ]; then
@@ -148,7 +166,11 @@ else
   warn "fish or fish_plugins missing, skipping fish plugin update"
 fi
 
-# --- 8. macOS system defaults --------------------------------------------
+# --- 9. Standard folders --------------------------------------------------
+log "Creating standard folders"
+mkdir -p "$HOME/Developer"
+
+# --- 10. macOS system defaults -------------------------------------------
 log "Applying macOS defaults"
 # Keyboard: fastest practical key repeat, and repeat held keys instead of
 # showing the accent popup.
@@ -186,6 +208,7 @@ defaults write com.apple.dock tilesize -int 16
 defaults write com.apple.dock size-immutable -bool true
 defaults write com.apple.dock mineffect -string "scale"
 defaults write com.apple.dock show-recents -bool false
+defaults write com.apple.dock autohide-time-modifier -float 0.15
 # Mission Control: do not reorder Spaces by most-recent use.
 defaults write com.apple.dock mru-spaces -bool false
 # Windows: faster resize animation, and expand Save/Print dialogs by default.
@@ -194,10 +217,9 @@ defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
 defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
 defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
 defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
-defaults write com.apple.dock autohide-time-modifier -float 0.15
 killall Dock Finder SystemUIServer 2>/dev/null || true
 
-# --- 9. Default app associations -----------------------------------------
+# --- 11. Default app associations ----------------------------------------
 # Registering iTerm via Launch Services for shell-script file types is the
 # equivalent of iTerm's "Make iTerm2 Default Term" menu item.
 if command -v duti >/dev/null 2>&1; then
@@ -218,7 +240,7 @@ else
   warn "duti missing, skipping default app associations"
 fi
 
-# --- 10. Touch ID for sudo ------------------------------------------------
+# --- 12. Touch ID for sudo -----------------------------------------------
 # sudo_local survives OS updates, unlike editing /etc/pam.d/sudo directly.
 if sudo grep -q pam_tid.so /etc/pam.d/sudo_local 2>/dev/null; then
   log "Touch ID for sudo already enabled"
