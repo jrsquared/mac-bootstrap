@@ -175,10 +175,11 @@ defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
 # Do not write .DS_Store files to network or USB volumes.
 defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
 defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
-# Screenshots: save to ~/Screenshots as PNG.
+# Screenshots: save to ~/Screenshots as PNG, no window drop-shadow.
 mkdir -p "$HOME/Screenshots"
 defaults write com.apple.screencapture location -string "$HOME/Screenshots"
 defaults write com.apple.screencapture type -string "png"
+defaults write com.apple.screencapture disable-shadow -bool true
 # Dock: autohide, smaller tiles, scale minimize, no recent apps, fast animation.
 defaults write com.apple.dock autohide -bool true
 defaults write com.apple.dock tilesize -int 48
