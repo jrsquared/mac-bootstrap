@@ -182,7 +182,7 @@ defaults write com.apple.screencapture type -string "png"
 defaults write com.apple.screencapture disable-shadow -bool true
 # Dock: autohide, smaller tiles, scale minimize, no recent apps, fast animation.
 defaults write com.apple.dock autohide -bool true
-defaults write com.apple.dock tilesize -int 48
+defaults write com.apple.dock tilesize -int 16
 defaults write com.apple.dock mineffect -string "scale"
 defaults write com.apple.dock show-recents -bool false
 defaults write com.apple.dock autohide-time-modifier -float 0.15
