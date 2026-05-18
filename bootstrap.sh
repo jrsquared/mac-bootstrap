@@ -114,9 +114,11 @@ fi
 
 # --- 7. macOS system defaults --------------------------------------------
 log "Applying macOS defaults"
-# Keyboard: fast key repeat.
-defaults write NSGlobalDomain KeyRepeat -int 2
-defaults write NSGlobalDomain InitialKeyRepeat -int 15
+# Keyboard: fastest practical key repeat, and repeat held keys instead of
+# showing the accent popup.
+defaults write NSGlobalDomain KeyRepeat -int 1
+defaults write NSGlobalDomain InitialKeyRepeat -int 10
+defaults write -g ApplePressAndHoldEnabled -bool false
 # Finder: show hidden files and all filename extensions.
 defaults write com.apple.finder AppleShowAllFiles -bool true
 defaults write NSGlobalDomain AppleShowAllExtensions -bool true
