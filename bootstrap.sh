@@ -38,35 +38,18 @@ else
 fi
 eval "$("$BREW_PREFIX/bin/brew" shellenv)"
 
-# --- 2. fish + chezmoi ----------------------------------------------------
-for pkg in fish chezmoi; do
-  if brew list --formula "$pkg" >/dev/null 2>&1; then
-    log "$pkg already installed"
-  else
-    log "Installing $pkg"
-    brew install "$pkg"
-  fi
-done
-
-FISH_PATH="$BREW_PREFIX/bin/fish"
-
-# --- 3. Make fish the default shell --------------------------------------
-if grep -qxF "$FISH_PATH" /etc/shells; then
-  log "fish already in /etc/shells"
+# --- 2. chezmoi -----------------------------------------------------------
+# chezmoi must be installed directly: it clones the dotfiles repo that contains
+# the Brewfile. Everything else (fish included) comes from the Brewfile via
+# `brew bundle` below.
+if brew list --formula chezmoi >/dev/null 2>&1; then
+  log "chezmoi already installed"
 else
-  log "Adding $FISH_PATH to /etc/shells (sudo)"
-  echo "$FISH_PATH" | sudo tee -a /etc/shells >/dev/null
+  log "Installing chezmoi"
+  brew install chezmoi
 fi
 
-CURRENT_SHELL="$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')"
-if [ "$CURRENT_SHELL" = "$FISH_PATH" ]; then
-  log "fish already the default shell"
-else
-  log "Changing default shell to fish (sudo)"
-  sudo chsh -s "$FISH_PATH" "$USER"
-fi
-
-# --- 4. Ensure GitHub SSH access -----------------------------------------
+# --- 3. Ensure GitHub SSH access -----------------------------------------
 # The dotfiles repo is private, so cloning it needs a working SSH key.
 # `ssh -T git@github.com` always exits 1 (GitHub grants no shell), so capture
 # the output and inspect it rather than relying on the exit status. stdin is
@@ -89,7 +72,7 @@ else
   exit 1
 fi
 
-# --- 5. chezmoi init / apply ---------------------------------------------
+# --- 4. chezmoi init / apply ---------------------------------------------
 CHEZMOI_SRC="$(chezmoi source-path 2>/dev/null || echo "$HOME/.local/share/chezmoi")"
 if [ -d "$CHEZMOI_SRC/.git" ]; then
   log "chezmoi already initialized, updating"
@@ -104,12 +87,33 @@ else
   fi
 fi
 
-# --- 6. Install apps from Brewfile ---------------------------------------
+# --- 5. Install apps from Brewfile ---------------------------------------
 if [ -f "$BREWFILE" ]; then
   log "Installing apps from Brewfile"
   brew bundle --file="$BREWFILE"
 else
   warn "No Brewfile at $BREWFILE, skipping brew bundle"
+fi
+
+# --- 6. Make fish the default shell --------------------------------------
+FISH_PATH="$BREW_PREFIX/bin/fish"
+if [ ! -x "$FISH_PATH" ]; then
+  warn "fish not installed (add it to the Brewfile), skipping default-shell change"
+else
+  if grep -qxF "$FISH_PATH" /etc/shells; then
+    log "fish already in /etc/shells"
+  else
+    log "Adding $FISH_PATH to /etc/shells (sudo)"
+    echo "$FISH_PATH" | sudo tee -a /etc/shells >/dev/null
+  fi
+
+  CURRENT_SHELL="$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')"
+  if [ "$CURRENT_SHELL" = "$FISH_PATH" ]; then
+    log "fish already the default shell"
+  else
+    log "Changing default shell to fish (sudo)"
+    sudo chsh -s "$FISH_PATH" "$USER"
+  fi
 fi
 
 # --- 7. macOS system defaults --------------------------------------------
