@@ -55,8 +55,10 @@ fi
 
 # --- 4. Ensure GitHub SSH access -----------------------------------------
 # The dotfiles repo is private, so cloning it needs a working SSH key.
-if ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1 \
-     | grep -q "successfully authenticated"; then
+# `ssh -T git@github.com` always exits 1 (GitHub grants no shell), so capture
+# the output and inspect it rather than relying on the exit status.
+SSH_TEST="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1 || true)"
+if printf '%s' "$SSH_TEST" | grep -q "successfully authenticated"; then
   log "GitHub SSH access OK"
 else
   warn "No working GitHub SSH key detected"
