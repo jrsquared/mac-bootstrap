@@ -213,6 +213,14 @@ defaults write com.apple.dock autohide-time-modifier -float 0.15
 defaults write com.apple.dock mru-spaces -bool false
 # Menu bar: analog clock.
 defaults write com.apple.menuextra.clock IsAnalog -bool true
+# Menu bar: hide Wi-Fi, Bluetooth, Sound, and Time Machine (Control Center is
+# stored per-host, hence -currentHost).
+defaults -currentHost write com.apple.controlcenter "NSStatusItem Visible WiFi" -bool false
+defaults -currentHost write com.apple.controlcenter "NSStatusItem Visible Bluetooth" -bool false
+defaults -currentHost write com.apple.controlcenter "NSStatusItem Visible Sound" -bool false
+defaults -currentHost write com.apple.controlcenter "NSStatusItem Visible TimeMachine" -bool false
+# Menu bar: hide the Spotlight icon.
+defaults -currentHost write com.apple.Spotlight MenuItemHidden -int 1
 # Windows: faster resize animation, and expand Save/Print dialogs by default.
 defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
 defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
