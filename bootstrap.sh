@@ -2,6 +2,11 @@
 # bootstrap.sh - idempotent Mac setup: Homebrew, fish, chezmoi, dotfiles, apps.
 set -euo pipefail
 
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "bootstrap.sh only runs on macOS." >&2
+  exit 1
+fi
+
 DOTFILES_SSH="git@github.com:jrsquared/dotfiles.git"
 DOTFILES_HTTPS="https://github.com/jrsquared/dotfiles.git"
 SSH_KEY="$HOME/.ssh/id_ed25519"
@@ -91,6 +96,17 @@ fi
 if [ -f "$BREWFILE" ]; then
   log "Installing apps from Brewfile"
   brew bundle --file="$BREWFILE"
+  # Make the Brewfile authoritative: opt in with BOOTSTRAP_CLEANUP=1 to
+  # uninstall anything not listed. Without it, just show what would be removed.
+  if [ "${BOOTSTRAP_CLEANUP:-0}" = "1" ]; then
+    log "Removing packages not in the Brewfile (BOOTSTRAP_CLEANUP=1)"
+    brew bundle cleanup --file="$BREWFILE" --force
+  else
+    if ! brew bundle cleanup --file="$BREWFILE" 2>/dev/null; then
+      warn "Packages above are not in the Brewfile."
+      warn "Re-run with BOOTSTRAP_CLEANUP=1 to uninstall them."
+    fi
+  fi
 else
   warn "No Brewfile at $BREWFILE, skipping brew bundle"
 fi
