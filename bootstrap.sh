@@ -169,16 +169,25 @@ defaults write com.apple.screencapture type -string "png"
 defaults write com.apple.dock autohide -bool true
 killall Dock Finder SystemUIServer 2>/dev/null || true
 
-# --- 9. Make iTerm the default terminal ----------------------------------
-# macOS has no single default-terminal setting; this registers iTerm via
-# Launch Services as the handler for shell-script file types, the equivalent
-# of iTerm's "Make iTerm2 Default Term" menu item.
-if command -v duti >/dev/null 2>&1 && [ -d "/Applications/iTerm.app" ]; then
-  log "Setting iTerm as the default terminal"
-  duti -s com.googlecode.iterm2 com.apple.terminal.shell-script all
-  duti -s com.googlecode.iterm2 public.shell-script all
+# --- 9. Default app associations -----------------------------------------
+# Registering iTerm via Launch Services for shell-script file types is the
+# equivalent of iTerm's "Make iTerm2 Default Term" menu item.
+if command -v duti >/dev/null 2>&1; then
+  if [ -d "/Applications/iTerm.app" ]; then
+    log "Setting iTerm as the default terminal"
+    duti -s com.googlecode.iterm2 com.apple.terminal.shell-script all
+    duti -s com.googlecode.iterm2 public.shell-script all
+  else
+    warn "iTerm missing, skipping default-terminal association"
+  fi
+  if [ -d "/Applications/Visual Studio Code.app" ]; then
+    log "Setting VS Code as the default app for JSON files"
+    duti -s com.microsoft.VSCode public.json all
+  else
+    warn "VS Code missing, skipping JSON association"
+  fi
 else
-  warn "duti or iTerm missing, skipping default-terminal step"
+  warn "duti missing, skipping default app associations"
 fi
 
 # --- 10. Touch ID for sudo ------------------------------------------------
