@@ -116,7 +116,23 @@ else
   fi
 fi
 
-# --- 7. macOS system defaults --------------------------------------------
+# --- 7. fish plugins (fisher) --------------------------------------------
+# fish_plugins is chezmoi-managed; `fisher update` installs every plugin listed
+# there and updates ones already present.
+if [ -x "$FISH_PATH" ] && [ -f "$HOME/.config/fish/fish_plugins" ]; then
+  log "Installing/updating fish plugins via fisher"
+  "$FISH_PATH" -c '
+    if not functions -q fisher
+      curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source
+      fisher install jorgebucaran/fisher
+    end
+    fisher update
+  '
+else
+  warn "fish or fish_plugins missing, skipping fish plugin update"
+fi
+
+# --- 8. macOS system defaults --------------------------------------------
 log "Applying macOS defaults"
 # Keyboard: fastest practical key repeat, and repeat held keys instead of
 # showing the accent popup.
@@ -137,7 +153,7 @@ defaults write com.apple.screencapture type -string "png"
 defaults write com.apple.dock autohide -bool true
 killall Dock Finder SystemUIServer 2>/dev/null || true
 
-# --- 8. Touch ID for sudo -------------------------------------------------
+# --- 9. Touch ID for sudo -------------------------------------------------
 # sudo_local survives OS updates, unlike editing /etc/pam.d/sudo directly.
 if sudo grep -q pam_tid.so /etc/pam.d/sudo_local 2>/dev/null; then
   log "Touch ID for sudo already enabled"
