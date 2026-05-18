@@ -211,13 +211,15 @@ defaults write com.apple.dock show-recents -bool false
 defaults write com.apple.dock autohide-time-modifier -float 0.15
 # Mission Control: do not reorder Spaces by most-recent use.
 defaults write com.apple.dock mru-spaces -bool false
+# Menu bar: analog clock.
+defaults write com.apple.menuextra.clock IsAnalog -bool true
 # Windows: faster resize animation, and expand Save/Print dialogs by default.
 defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
 defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
 defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
 defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
 defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
-killall Dock Finder SystemUIServer 2>/dev/null || true
+killall Dock Finder SystemUIServer ControlCenter 2>/dev/null || true
 
 # --- 11. Default app associations ----------------------------------------
 # Registering iTerm via Launch Services for shell-script file types is the
