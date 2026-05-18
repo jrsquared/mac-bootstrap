@@ -19,10 +19,15 @@ warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$1"; }
 trap 'warn "bootstrap failed at line $LINENO"' ERR
 
 # Cache sudo credentials up front and keep them fresh so later steps that need
-# sudo do not re-prompt mid-run.
+# sudo do not re-prompt mid-run. The `|| break` guards keep the loop alive
+# under `set -e` (a failed refresh must not silently kill the keepalive).
 log "Requesting sudo access"
 sudo -v
-while true; do sudo -n true; sleep 50; kill -0 "$$" 2>/dev/null || exit; done &
+while true; do
+  sudo -n true 2>/dev/null || break
+  sleep 50
+  kill -0 "$$" 2>/dev/null || break
+done &
 
 # Keep the Mac awake for the duration of this run.
 caffeinate -dimsu -w $$ &
