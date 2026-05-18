@@ -1,8 +1,13 @@
 # mac-bootstrap
 
-Idempotent bootstrap script for a new Mac. Installs Homebrew, fish, and
-chezmoi, sets fish as the default shell, ensures a GitHub SSH key exists, and
-applies the dotfiles from the private `jrsquared/dotfiles` repo.
+Idempotent bootstrap script for a new Mac. It:
+
+- installs Homebrew, fish, and chezmoi
+- sets fish as the default shell
+- ensures a GitHub SSH key exists
+- applies the dotfiles from the private `jrsquared/dotfiles` repo
+- installs apps from the chezmoi-managed Brewfile (`brew bundle`)
+- applies macOS system defaults and enables Touch ID for `sudo`
 
 This repo is public so the script can be fetched without authentication. It
 contains no secrets.
