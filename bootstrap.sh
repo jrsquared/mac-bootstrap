@@ -169,7 +169,19 @@ defaults write com.apple.screencapture type -string "png"
 defaults write com.apple.dock autohide -bool true
 killall Dock Finder SystemUIServer 2>/dev/null || true
 
-# --- 9. Touch ID for sudo -------------------------------------------------
+# --- 9. Make iTerm the default terminal ----------------------------------
+# macOS has no single default-terminal setting; this registers iTerm via
+# Launch Services as the handler for shell-script file types, the equivalent
+# of iTerm's "Make iTerm2 Default Term" menu item.
+if command -v duti >/dev/null 2>&1 && [ -d "/Applications/iTerm.app" ]; then
+  log "Setting iTerm as the default terminal"
+  duti -s com.googlecode.iterm2 com.apple.terminal.shell-script all
+  duti -s com.googlecode.iterm2 public.shell-script all
+else
+  warn "duti or iTerm missing, skipping default-terminal step"
+fi
+
+# --- 10. Touch ID for sudo ------------------------------------------------
 # sudo_local survives OS updates, unlike editing /etc/pam.d/sudo directly.
 if sudo grep -q pam_tid.so /etc/pam.d/sudo_local 2>/dev/null; then
   log "Touch ID for sudo already enabled"
