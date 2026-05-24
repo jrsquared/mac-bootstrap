@@ -65,6 +65,36 @@ if [ "${1:-install}" = "doctor" ]; then
   exit $?
 fi
 
+# --- Self-update ---------------------------------------------------------
+# If running from a git clone of this repo, pull latest from origin and
+# re-exec the updated script. Skipped if:
+#   - SKIP_SELF_UPDATE=1 in the env (use when testing local edits)
+#   - already re-exec'd once this run (BOOTSTRAP_SELF_UPDATED=1)
+#   - not in a git working tree
+#   - working tree has uncommitted changes (would clobber your work)
+#   - already on the latest origin/main commit
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ "${SKIP_SELF_UPDATE:-0}" != "1" ] && [ "${BOOTSTRAP_SELF_UPDATED:-0}" != "1" ] \
+   && git -C "$SCRIPT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+  if ! git -C "$SCRIPT_DIR" diff --quiet || ! git -C "$SCRIPT_DIR" diff --cached --quiet; then
+    warn "mac-bootstrap working tree has uncommitted changes, skipping self-update"
+  else
+    log "Checking for mac-bootstrap updates"
+    git -C "$SCRIPT_DIR" fetch --quiet origin
+    LOCAL="$(git -C "$SCRIPT_DIR" rev-parse HEAD)"
+    REMOTE="$(git -C "$SCRIPT_DIR" rev-parse @{u} 2>/dev/null || echo "$LOCAL")"
+    if [ "$LOCAL" != "$REMOTE" ]; then
+      BEHIND="$(git -C "$SCRIPT_DIR" rev-list --count "$LOCAL..$REMOTE")"
+      log "Local is $BEHIND commit(s) behind origin, pulling and re-executing"
+      git -C "$SCRIPT_DIR" pull --ff-only --quiet
+      export BOOTSTRAP_SELF_UPDATED=1
+      exec "$0" "$@"
+    else
+      log "mac-bootstrap up to date"
+    fi
+  fi
+fi
+
 # --- Logging --------------------------------------------------------------
 # Tee all output to a dated logfile so failures weeks from now have receipts.
 LOG_DIR="$HOME/.local/share/mac-bootstrap"
