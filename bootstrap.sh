@@ -243,6 +243,7 @@ LOGIN_APPS=(
   "/Applications/1Password.app"
   "/Applications/Dato.app"
   "/Applications/Lungo.app"
+  "/Applications/OpenIn.app"
   "/Applications/Rectangle Pro.app"
   "/Applications/Todoist.app"
 )
