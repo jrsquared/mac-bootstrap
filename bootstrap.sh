@@ -43,7 +43,15 @@ doctor() {
   check "1Password CLI installed"                   'command -v op'
   check "1Password SSH agent socket present"        '[ -S "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" ]'
   check "Touch ID for sudo enabled"                 'sudo -n grep -q pam_tid.so /etc/pam.d/sudo_local'
+  check "Boot chime muted"                          '[ "$(sudo -n nvram StartupMute 2>/dev/null | awk "{print \$2}")" = "%01" ]'
   check "Screenshots folder exists"                 '[ -d "$HOME/Screenshots" ]'
+  check "Spotlight skip marker in ~/Development"    '[ -f "$HOME/Development/.metadata_never_index" ]'
+  log "Network quality (10s test):"
+  if quality_output=$(networkQuality -s 2>&1); then
+    printf '%s\n' "$quality_output" | grep -E 'Downlink|Uplink|Responsiveness' | sed 's/^/    /'
+  else
+    bad "networkQuality failed"
+  fi
   if [ "$fail" -eq 0 ]; then
     log "All checks passed"
   else
@@ -56,6 +64,14 @@ if [ "${1:-install}" = "doctor" ]; then
   doctor
   exit $?
 fi
+
+# --- Logging --------------------------------------------------------------
+# Tee all output to a dated logfile so failures weeks from now have receipts.
+LOG_DIR="$HOME/.local/share/mac-bootstrap"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d_%H%M%S).log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "Bootstrap log: $LOG_FILE"
 
 # --- 0. Robustness --------------------------------------------------------
 trap 'warn "bootstrap failed at line $LINENO"' ERR
@@ -216,7 +232,15 @@ fi
 # --- 9. Standard folders --------------------------------------------------
 log "Creating standard folders"
 mkdir -p "$HOME/Developer"
+mkdir -p "$HOME/Development"
 mkdir -p "$HOME/Screenshots"
+
+# Tell Spotlight to skip ~/Development entirely. node_modules / .next /
+# build dirs cause mdworker thrash that you'll never use a Spotlight result
+# from anyway. The marker file is what mdworker checks; mdutil sets the
+# volume-level preference.
+touch "$HOME/Development/.metadata_never_index"
+touch "$HOME/Developer/.metadata_never_index"
 
 # --- 10. macOS system defaults -------------------------------------------
 # Applied by chezmoi: run_onchange_macos-defaults.sh.tmpl. Re-runs on every
@@ -284,7 +308,16 @@ else
   warn "duti missing, skipping default app associations"
 fi
 
-# --- 14. Touch ID for sudo -----------------------------------------------
+# --- 14. Mute boot chime (Apple Silicon) ---------------------------------
+# %01 = muted, %00 = unmuted. Survives reboots; survives most OS upgrades.
+if [ "$(sudo nvram StartupMute 2>/dev/null | awk '{print $2}')" = "%01" ]; then
+  log "Boot chime already muted"
+else
+  log "Muting boot chime"
+  sudo nvram StartupMute=%01
+fi
+
+# --- 15. Touch ID for sudo -----------------------------------------------
 # sudo_local survives OS updates, unlike editing /etc/pam.d/sudo directly.
 if sudo grep -q pam_tid.so /etc/pam.d/sudo_local 2>/dev/null; then
   log "Touch ID for sudo already enabled"
@@ -294,4 +327,8 @@ else
     | sudo tee /etc/pam.d/sudo_local >/dev/null
 fi
 
+log "Bootstrap complete. Verifying with doctor..."
+doctor || warn "doctor reported issues (see above)"
+
 log "Done. Open a new terminal to start using fish."
+log "Full log saved to: $LOG_FILE"
