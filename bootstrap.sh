@@ -239,7 +239,13 @@ fi
 # --- 12. Login items ------------------------------------------------------
 # Apps that should auto-launch at login. 1Password is critical because its
 # SSH agent serves keys; without it running, git push/chezmoi update fail.
-LOGIN_APPS=("/Applications/1Password.app")
+LOGIN_APPS=(
+  "/Applications/1Password.app"
+  "/Applications/Dato.app"
+  "/Applications/Lungo.app"
+  "/Applications/Rectangle Pro.app"
+  "/Applications/Todoist.app"
+)
 if EXISTING_ITEMS="$(osascript -e 'tell application "System Events" to get name of every login item' 2>/dev/null)"; then
   for app_path in "${LOGIN_APPS[@]}"; do
     app_name="$(basename "$app_path" .app)"
