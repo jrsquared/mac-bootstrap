@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # bootstrap.sh - idempotent Mac setup: Homebrew, fish, chezmoi, dotfiles, apps.
+#
+# Usage:
+#   ./bootstrap.sh          install + configure (default)
+#   ./bootstrap.sh doctor   verify the install is healthy
 set -euo pipefail
 
 if [ "$(uname -s)" != "Darwin" ]; then
@@ -14,6 +18,44 @@ BREWFILE="$HOME/.config/homebrew/Brewfile"
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$1"; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$1"; }
+ok()   { printf '  \033[1;32m✓\033[0m %s\n' "$1"; }
+bad()  { printf '  \033[1;31m✗\033[0m %s\n' "$1"; }
+
+doctor() {
+  log "Running doctor: verifying system state"
+  local fail=0
+  check() {
+    if eval "$2" >/dev/null 2>&1; then ok "$1"; else bad "$1"; fail=$((fail + 1)); fi
+  }
+  check "Homebrew on PATH"                          'command -v brew'
+  check "fish installed"                            'command -v fish'
+  check "fish is the default shell"                 '[ "$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk "{print \$2}")" = "$(command -v fish)" ]'
+  check "chezmoi installed"                         'command -v chezmoi'
+  check "chezmoi has no pending changes"            'test -z "$(chezmoi diff)"'
+  check "Brewfile exists"                           '[ -f "$BREWFILE" ]'
+  check "Brewfile fully installed"                  'brew bundle check --no-upgrade --quiet --file="$BREWFILE"'
+  check "gh installed"                              'command -v gh'
+  check "gh authenticated"                          'gh auth status'
+  check "gitleaks installed"                        'command -v gitleaks'
+  check "dotfiles repo pre-push hook installed"     '[ -x "$HOME/.local/share/chezmoi/.git/hooks/pre-push" ]'
+  check "atuin installed"                           'command -v atuin'
+  check "direnv installed"                          'command -v direnv'
+  check "1Password CLI installed"                   'command -v op'
+  check "1Password SSH agent socket present"        '[ -S "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" ]'
+  check "Touch ID for sudo enabled"                 'sudo -n grep -q pam_tid.so /etc/pam.d/sudo_local'
+  check "Screenshots folder exists"                 '[ -d "$HOME/Screenshots" ]'
+  if [ "$fail" -eq 0 ]; then
+    log "All checks passed"
+  else
+    warn "$fail check(s) failed"
+  fi
+  return "$fail"
+}
+
+if [ "${1:-install}" = "doctor" ]; then
+  doctor
+  exit $?
+fi
 
 # --- 0. Robustness --------------------------------------------------------
 trap 'warn "bootstrap failed at line $LINENO"' ERR
@@ -177,64 +219,24 @@ mkdir -p "$HOME/Developer"
 mkdir -p "$HOME/Screenshots"
 
 # --- 10. macOS system defaults -------------------------------------------
-log "Applying macOS defaults"
-# Keyboard: fastest practical key repeat, and repeat held keys instead of
-# showing the accent popup.
-defaults write NSGlobalDomain KeyRepeat -int 1
-defaults write NSGlobalDomain InitialKeyRepeat -int 10
-defaults write -g ApplePressAndHoldEnabled -bool false
-# Text input: disable smart-quote, smart-dash, autocorrect, auto-capitalize
-# substitution (curly quotes in particular break code).
-defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
-defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
-defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
-defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false
-# Finder: show hidden files and all filename extensions.
-defaults write com.apple.finder AppleShowAllFiles -bool true
-defaults write NSGlobalDomain AppleShowAllExtensions -bool true
-# Finder: path bar, status bar, list view, search current folder, folders on
-# top, and no warning when changing a file extension.
-defaults write com.apple.finder ShowPathbar -bool true
-defaults write com.apple.finder ShowStatusBar -bool true
-defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
-defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
-defaults write com.apple.finder _FXSortFoldersFirst -bool true
-defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
-# Do not write .DS_Store files to network or USB volumes.
-defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
-defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
-# Screenshots: save to ~/Screenshots (created above) as PNG, no drop-shadow.
-defaults write com.apple.screencapture location -string "$HOME/Screenshots"
-defaults write com.apple.screencapture type -string "png"
-defaults write com.apple.screencapture disable-shadow -bool true
-# Dock: autohide, smaller tiles, scale minimize, no recent apps, fast animation.
-defaults write com.apple.dock autohide -bool true
-defaults write com.apple.dock tilesize -int 16
-defaults write com.apple.dock size-immutable -bool true
-defaults write com.apple.dock mineffect -string "scale"
-defaults write com.apple.dock show-recents -bool false
-defaults write com.apple.dock autohide-time-modifier -float 0.15
-# Mission Control: do not reorder Spaces by most-recent use.
-defaults write com.apple.dock mru-spaces -bool false
-# Menu bar: analog clock.
-defaults write com.apple.menuextra.clock IsAnalog -bool true
-# Menu bar: hide Wi-Fi, Bluetooth, Sound, and Time Machine (Control Center is
-# stored per-host, hence -currentHost).
-defaults -currentHost write com.apple.controlcenter "NSStatusItem Visible WiFi" -bool false
-defaults -currentHost write com.apple.controlcenter "NSStatusItem Visible Bluetooth" -bool false
-defaults -currentHost write com.apple.controlcenter "NSStatusItem Visible Sound" -bool false
-defaults -currentHost write com.apple.controlcenter "NSStatusItem Visible TimeMachine" -bool false
-# Menu bar: hide the Spotlight icon.
-defaults -currentHost write com.apple.Spotlight MenuItemHidden -int 1
-# Windows: faster resize animation, and expand Save/Print dialogs by default.
-defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
-defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
-defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
-defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
-defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
-killall Dock Finder SystemUIServer ControlCenter 2>/dev/null || true
+# Applied by chezmoi: run_onchange_macos-defaults.sh.tmpl. Re-runs on every
+# chezmoi apply when the file's content hash changes, so editing a default
+# value there propagates without re-running bootstrap.
 
-# --- 11. Default app associations ----------------------------------------
+# --- 11. gh CLI extensions ------------------------------------------------
+if command -v gh >/dev/null 2>&1; then
+  for ext_repo in dlvhdr/gh-dash; do
+    ext_name="${ext_repo##*/}"
+    if gh extension list 2>/dev/null | awk '{print $3}' | grep -qx "$ext_repo"; then
+      log "gh extension $ext_name already installed"
+    else
+      log "Installing gh extension $ext_name"
+      gh extension install "$ext_repo" || warn "Failed to install gh extension $ext_repo"
+    fi
+  done
+fi
+
+# --- 12. Default app associations ----------------------------------------
 # Registering iTerm via Launch Services for shell-script file types is the
 # equivalent of iTerm's "Make iTerm2 Default Term" menu item.
 if command -v duti >/dev/null 2>&1; then
@@ -255,7 +257,7 @@ else
   warn "duti missing, skipping default app associations"
 fi
 
-# --- 12. Touch ID for sudo -----------------------------------------------
+# --- 13. Touch ID for sudo -----------------------------------------------
 # sudo_local survives OS updates, unlike editing /etc/pam.d/sudo directly.
 if sudo grep -q pam_tid.so /etc/pam.d/sudo_local 2>/dev/null; then
   log "Touch ID for sudo already enabled"
