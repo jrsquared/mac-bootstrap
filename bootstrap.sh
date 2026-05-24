@@ -236,7 +236,27 @@ if command -v gh >/dev/null 2>&1; then
   done
 fi
 
-# --- 12. Default app associations ----------------------------------------
+# --- 12. Login items ------------------------------------------------------
+# Apps that should auto-launch at login. 1Password is critical because its
+# SSH agent serves keys; without it running, git push/chezmoi update fail.
+LOGIN_APPS=("/Applications/1Password.app")
+if EXISTING_ITEMS="$(osascript -e 'tell application "System Events" to get name of every login item' 2>/dev/null)"; then
+  for app_path in "${LOGIN_APPS[@]}"; do
+    app_name="$(basename "$app_path" .app)"
+    if [ ! -d "$app_path" ]; then
+      warn "$app_name not installed, skipping login-item add"
+      continue
+    fi
+    if printf '%s\n' "$EXISTING_ITEMS" | tr ',' '\n' | grep -qF "$app_name"; then
+      log "$app_name already in Login Items"
+    else
+      log "Adding $app_name to Login Items"
+      osascript -e "tell application \"System Events\" to make new login item with properties {path:\"$app_path\", hidden:true}" >/dev/null
+    fi
+  done
+fi
+
+# --- 13. Default app associations ----------------------------------------
 # Registering iTerm via Launch Services for shell-script file types is the
 # equivalent of iTerm's "Make iTerm2 Default Term" menu item.
 if command -v duti >/dev/null 2>&1; then
@@ -257,7 +277,7 @@ else
   warn "duti missing, skipping default app associations"
 fi
 
-# --- 13. Touch ID for sudo -----------------------------------------------
+# --- 14. Touch ID for sudo -----------------------------------------------
 # sudo_local survives OS updates, unlike editing /etc/pam.d/sudo directly.
 if sudo grep -q pam_tid.so /etc/pam.d/sudo_local 2>/dev/null; then
   log "Touch ID for sudo already enabled"
