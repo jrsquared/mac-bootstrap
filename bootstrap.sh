@@ -38,7 +38,6 @@ doctor() {
   check "gh authenticated"                          'gh auth status'
   check "gitleaks installed"                        'command -v gitleaks'
   check "dotfiles repo pre-push hook installed"     '[ -x "$HOME/.local/share/chezmoi/.git/hooks/pre-push" ]'
-  check "atuin installed"                           'command -v atuin'
   check "direnv installed"                          'command -v direnv'
   check "1Password CLI installed"                   'command -v op'
   check "1Password SSH agent socket present"        '[ -S "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" ]'
