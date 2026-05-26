@@ -254,7 +254,7 @@ if [ -x "$FISH_PATH" ] && [ -f "$HOME/.config/fish/fish_plugins" ]; then
       fisher install jorgebucaran/fisher
     end
     fisher update
-  '
+  ' < /dev/null
 else
   warn "fish or fish_plugins missing, skipping fish plugin update"
 fi
